@@ -419,3 +419,44 @@ except SchemaValidationError as err:
     print(err.node)  # The BaseField node where the validation was raised.
     print(err.extra) # Any extra argument of the error.
 ```
+
+
+## Creating custom validators
+
+For better context, let's use this sample:
+
+```python
+from py_schema import DictField
+from .my_field import MyField
+
+
+schema = DictField(
+    schema={
+        'my_field': MyField()
+    }
+)
+
+value = {
+    'my_field': 'Avalon'
+}
+
+```
+
+```python
+from py_schema import BaseField
+
+
+class MyField(BaseField):
+    def validator(self):
+        ctx = self.ctx # the custom SchemaValidator instance
+        value = self.value # here is the current value of the schema (in this sample: "Avalon")
+        
+        if value != 'Avalon': # create you custom validation
+            self.raise_error( # if your validation fails, raise an error
+                code='MY_CUSTOM_CODE',
+                extra="Any other extra info for your error (optional)"
+            )
+```
+
+
+And that's it =).

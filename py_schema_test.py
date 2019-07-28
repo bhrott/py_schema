@@ -28,6 +28,29 @@ class SchemaValidatorTest(TestCase):
                 e.code, 'REQUIRED_VALUE'
             )
 
+    def test_raised_error_should_contain_node(self):
+        age_field = IntField(min=18)
+
+        schema = DictField(
+            schema={
+                'age': age_field
+            }
+        )
+
+        value = {
+            'age': 12
+        }
+
+        try:
+            validator = SchemaValidator(schema, value)
+            validator.validate()
+            self.fail()
+        except SchemaValidationError as err:
+            self.assertEqual(
+                err.node,
+                age_field
+            )
+
     def test_full_schema_should_pass(self):
         schema = ListField(
             min_items=1,
