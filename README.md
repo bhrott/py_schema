@@ -3,6 +3,12 @@
 A simple and extensible schema validator.
 
 
+## Install
+
+```
+pip install py-schema
+```
+
 ## Usage
 
 ```python
@@ -55,7 +61,7 @@ It has some shared props that you can use in all fields.
 
 #### required
 
-If marked as `True` (default) and the value is `None`, it will raise an error.
+If marked as `True` (default) and the value is `None`, it will raise a `REQUIRED_VALUE` error.
 
 ```python
 from py_schema import SchemaValidator, SchemaValidationError, StrField
@@ -67,14 +73,14 @@ try:
     validator = SchemaValidator(schema, value)
     validator.validate()
 except SchemaValidationError as err:
-    print(err.message)  # "REQUIRED_VALUE"
+    print(err.code)  # "REQUIRED_VALUE"
 
 ```
 
 
 ### IntField
 
-Validate if the value is an integer
+Validate if the value is an integer.
 
 ```python
 from py_schema import SchemaValidator, IntField
@@ -263,14 +269,14 @@ try:
     validator.validate()
     
 except SchemaValidationError as err:
-    print(err.code)  # DICT_PROP_NOT_ALLOWED_ERROR
+    print(err.code)  # DICT_PROP_NOT_ALLOWED
     print(err.extra)  # {'prop': 'contacts'}
 
 ```
 
 In this case, the `contacts` property in the value is not present in the schema.
 
-It will raise a `DICT_PROP_NOT_ALLOWED_ERROR`.
+It will raise a `DICT_PROP_NOT_ALLOWED`.
 
 
 #### optional_props ([str], optional, default [])
@@ -312,8 +318,7 @@ try:
         schema={
             'name': StrField(),
             'admin': BoolField()
-        },
-        strict=True
+        }
     )
     
     value = {
@@ -399,6 +404,28 @@ If the value is not in the `accepted`, it will raise a `ENUM_VALUE_NOT_ACCEPT` e
 
 
 
+### Regex Field
+
+Validate if the value matches the regex.
+
+```python
+from py_schema import SchemaValidator, RegexField
+
+schema = RegexField(regex='\\d{5}\\Z')
+
+value = '12345'
+
+validator = SchemaValidator(schema, value)
+
+validator.validate()
+
+```
+
+#### regex (str, required)
+
+The regex pattern.
+
+
 ## Misc
 
 ### SchemaValidationError
@@ -448,7 +475,7 @@ from py_schema import BaseField
 
 class MyField(BaseField):
     def validator(self):
-        ctx = self.ctx # the custom SchemaValidator instance
+        ctx = self.ctx # the current SchemaValidator instance
         value = self.value # here is the current value of the schema (in this sample: "Avalon")
         
         if value != 'Avalon': # create you custom validation

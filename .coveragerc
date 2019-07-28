@@ -2,3 +2,5 @@
 omit=
     *__init__*
     *_test.py
+
+source=py_schema
