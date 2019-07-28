@@ -119,6 +119,7 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+playground.py
 
 # Pyre type checker
 .pyre/

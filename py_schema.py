@@ -1,9 +1,11 @@
 
 
 class SchemaValidationError(Exception):
-    def __init__(self, message: str, path: str):
-        self.message = message
+    def __init__(self, code: str, path: str, node, extra=None):
+        self.code = code
         self.path = path
+        self.node = node
+        self.extra = extra
 
 
 class SchemaValidator:
@@ -11,6 +13,7 @@ class SchemaValidator:
         self.schema = schema
         self.value = value
         self.path = ['$root']
+        self.is_valid = None
 
     def add_to_path(self, key: str):
         self.path.append(key)
@@ -18,16 +21,21 @@ class SchemaValidator:
     def pop_path(self):
         self.path.pop()
 
-    def raise_error(self, message: str):
+    def raise_error(self, code: str, node, extra=None):
+        self.is_valid = False
+
         raise SchemaValidationError(
-            message=message,
-            path='.'.join(self.path)
+            code=code,
+            path='.'.join(self.path),
+            node=node,
+            extra=extra
         )
 
     def validate(self):
         self.schema.value = self.value
         self.schema.ctx = self
         self.schema.validate()
+        self.is_valid = True
 
 
 class BaseField:
@@ -38,7 +46,7 @@ class BaseField:
 
     def validate_required(self):
         if self.required and self.value is None:
-            self.ctx.raise_error('The value is required')
+            self.raise_error('REQUIRED_VALUE')
 
     def validator(self):
         raise NotImplementedError()
@@ -46,6 +54,13 @@ class BaseField:
     def validate(self):
         self.validate_required()
         self.validator()
+
+    def raise_error(self, code: str, extra=None):
+        self.ctx.raise_error(
+            code=code,
+            node=self,
+            extra=extra
+        )
 
 
 class IntField(BaseField):
@@ -56,18 +71,18 @@ class IntField(BaseField):
 
     def validator(self):
         if type(self.value) is not int:
-            self.ctx.raise_error(
-                'The value is not an int'
+            self.raise_error(
+                'INT_TYPE'
             )
 
         if self.min is not None and self.value < self.min:
-            self.ctx.raise_error(
-                f'The value is less than {self.min}'
+            self.raise_error(
+                f'INT_MIN'
             )
 
         if self.max is not None and self.value > self.max:
-            self.ctx.raise_error(
-                f'The value is greater than {self.max}'
+            self.raise_error(
+                f'INT_MAX'
             )
 
 
@@ -79,18 +94,18 @@ class FloatField(BaseField):
 
     def validator(self):
         if type(self.value) is not float:
-            self.ctx.raise_error(
-                'The value is not a float'
+            self.raise_error(
+                'FLOAT_TYPE'
             )
 
         if self.min is not None and self.value < self.min:
-            self.ctx.raise_error(
-                f'The value is less than {self.min}'
+            self.raise_error(
+                f'FLOAT_MIN'
             )
 
         if self.max is not None and self.value > self.max:
-            self.ctx.raise_error(
-                f'The value is greater than {self.max}'
+            self.raise_error(
+                f'FLOAT_MAX'
             )
 
 
@@ -102,26 +117,26 @@ class StrField(BaseField):
 
     def validator(self):
         if type(self.value) is not str:
-            self.ctx.raise_error(
-                'The value is not a str'
+            self.raise_error(
+                'STR_TYPE'
             )
 
         if self.min_length is not None and len(self.value) < self.min_length:
-            self.ctx.raise_error(
-                f'The value has less then {self.min_length} length'
+            self.raise_error(
+                f'STR_MIN_LENGTH'
             )
 
         if self.max_length is not None and len(self.value) > self.max_length:
-            self.ctx.raise_error(
-                f'The value has more then {self.max_length} length'
+            self.raise_error(
+                f'STR_MAX_LENGTH'
             )
 
 
 class BoolField(BaseField):
     def validator(self):
         if type(self.value) is not bool:
-            self.ctx.raise_error(
-                'The value is not a bool'
+            self.raise_error(
+                'BOOL_TYPE'
             )
 
 
@@ -134,15 +149,16 @@ class DictField(BaseField):
 
     def validator(self):
         if type(self.value) is not dict:
-            self.ctx.raise_error(
-                'The value is not a dict'
+            self.raise_error(
+                'DICT_TYPE'
             )
 
         if self.strict:
             for value_prop_key in self.value:
                 if value_prop_key not in self.schema and value_prop_key not in self.optional_props:
-                    self.ctx.raise_error(
-                        f'The property "{value_prop_key}" is not allowed'
+                    self.raise_error(
+                        f'DICT_PROP_NOT_ALLOWED',
+                        extra={'prop': value_prop_key}
                     )
 
         for schema_prop_key in self.schema:
@@ -150,8 +166,9 @@ class DictField(BaseField):
                 if schema_prop_key in self.optional_props:
                     continue
                 else:
-                    self.ctx.raise_error(
-                        message='The property "{}" is missing'.format(schema_prop_key)
+                    self.raise_error(
+                        f'DICT_PROP_MISSING',
+                        extra={'prop': schema_prop_key}
                     )
 
             prop_field = self.schema[schema_prop_key]
@@ -167,26 +184,26 @@ class DictField(BaseField):
 
 
 class ListField(BaseField):
-    def __init__(self, item_schema: BaseField, min_length: int = None, max_length: int = None, *args, **kwargs):
+    def __init__(self, item_schema: BaseField, min_items: int = None, max_items: int = None, *args, **kwargs):
         super(ListField, self).__init__(*args, **kwargs)
         self.item_schema = item_schema
-        self.min_length = min_length
-        self.max_length = max_length
+        self.min_items = min_items
+        self.max_items = max_items
 
     def validator(self):
         if type(self.value) is not list:
-            self.ctx.raise_error(
-                'The value is not a list'
+            self.raise_error(
+                'LIST_TYPE'
             )
 
-        if self.min_length is not None and len(self.value) < self.min_length:
-            self.ctx.raise_error(
-                f'The value have less then {self.min_length} item(s)'
+        if self.min_items is not None and len(self.value) < self.min_items:
+            self.raise_error(
+                f'LIST_MIN_ITEMS'
             )
 
-        if self.max_length is not None and len(self.value) > self.max_length:
-            self.ctx.raise_error(
-                f'The value have more then {self.max_length} item(s)'
+        if self.max_items is not None and len(self.value) > self.max_items:
+            self.raise_error(
+                f'LIST_MAX_ITEMS'
             )
 
         for index, item in enumerate(self.value):
@@ -206,6 +223,6 @@ class EnumField(BaseField):
 
     def validator(self):
         if self.value not in self.accept:
-            self.ctx.raise_error(
-                f'The value is not accepted'
+            self.raise_error(
+                f'ENUM_VALUE_NOT_ACCEPT'
             )

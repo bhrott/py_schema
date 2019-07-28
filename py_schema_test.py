@@ -25,13 +25,13 @@ class SchemaValidatorTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is required'
+                e.code, 'REQUIRED_VALUE'
             )
 
     def test_full_schema_should_pass(self):
         schema = ListField(
-            min_length=1,
-            max_length=3,
+            min_items=1,
+            max_items=3,
             item_schema=DictField(
                 schema={
                     'name': StrField(
@@ -100,7 +100,7 @@ class IntFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not an int'
+                e.code, 'INT_TYPE'
             )
 
     def test_value_less_should_raise_error(self):
@@ -122,7 +122,7 @@ class IntFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is less than 1'
+                e.code, 'INT_MIN'
             )
 
     def test_value_greater_should_raise_error(self):
@@ -144,7 +144,7 @@ class IntFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is greater than 1'
+                e.code, 'INT_MAX'
             )
 
     def test_valid_value_should_pass(self):
@@ -180,7 +180,7 @@ class StrFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not a str'
+                e.code, 'STR_TYPE'
             )
 
     def test_min_length_should_raise_error(self):
@@ -202,7 +202,7 @@ class StrFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value has less then 4 length'
+                e.code, 'STR_MIN_LENGTH'
             )
 
     def test_max_length_should_raise_error(self):
@@ -224,7 +224,7 @@ class StrFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value has more then 4 length'
+                e.code, 'STR_MAX_LENGTH'
             )
 
     def test_valid_str_should_pass(self):
@@ -260,7 +260,7 @@ class BoolFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not a bool'
+                e.code, 'BOOL_TYPE'
             )
 
     def test_valid_bool_should_pass(self):
@@ -293,7 +293,7 @@ class FloatFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not a float'
+                e.code, 'FLOAT_TYPE'
             )
 
     def test_value_less_should_raise_error(self):
@@ -315,7 +315,7 @@ class FloatFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is less than 1'
+                e.code, 'FLOAT_MIN'
             )
 
     def test_value_greater_should_raise_error(self):
@@ -337,7 +337,7 @@ class FloatFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is greater than 1'
+                e.code, 'FLOAT_MAX'
             )
 
     def test_valid_value_should_pass(self):
@@ -375,7 +375,38 @@ class DictFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not a dict'
+                e.code, 'DICT_TYPE'
+            )
+
+    def test_missing_prop_should_raise_error(self):
+        schema = DictField(
+            schema={
+                'foo': BoolField(),
+                'bar': BoolField()
+            }
+        )
+        value = {
+            'foo': True
+        }
+
+        validator = SchemaValidator(
+            schema=schema,
+            value=value
+        )
+
+        try:
+            validator.validate()
+            self.fail()
+        except SchemaValidationError as e:
+            self.assertEqual(
+                e.path, '$root'
+            )
+            self.assertEqual(
+                e.code, 'DICT_PROP_MISSING'
+            )
+            self.assertEqual(
+                e.extra,
+                {'prop': 'bar'}
             )
 
     def test_not_allowed_prop_should_raise_error(self):
@@ -405,7 +436,11 @@ class DictFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The property "baz" is not allowed'
+                e.code, 'DICT_PROP_NOT_ALLOWED'
+            )
+            self.assertEqual(
+                e.extra,
+                {'prop': 'baz'}
             )
 
     def test_optional_prop_should_be_valid_if_not_present(self):
@@ -454,7 +489,7 @@ class DictFieldTest(TestCase):
                 e.path, '$root.bar'
             )
             self.assertEqual(
-                e.message, 'The value is not a bool'
+                e.code, 'BOOL_TYPE'
             )
 
     def test_nested_dict_with_invalid_prop_should_raise_error(self):
@@ -489,7 +524,7 @@ class DictFieldTest(TestCase):
                 e.path, '$root.bar.baz'
             )
             self.assertEqual(
-                e.message, 'The value is not a bool'
+                e.code, 'BOOL_TYPE'
             )
 
 
@@ -513,13 +548,13 @@ class ListFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not a list'
+                e.code, 'LIST_TYPE'
             )
 
     def test_less_items_should_raise_error(self):
         schema = ListField(
             item_schema=BoolField(),
-            min_length=1
+            min_items=1
         )
         value = []
 
@@ -536,13 +571,13 @@ class ListFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value have less then 1 item(s)'
+                e.code, 'LIST_MIN_ITEMS'
             )
 
     def test_more_items_should_raise_error(self):
         schema = ListField(
             item_schema=BoolField(),
-            max_length=1
+            max_items=1
         )
         value = [True, False]
 
@@ -559,7 +594,7 @@ class ListFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value have more then 1 item(s)'
+                e.code, 'LIST_MAX_ITEMS'
             )
 
     def test_invalid_item_value_should_raise_error(self):
@@ -581,7 +616,7 @@ class ListFieldTest(TestCase):
                 e.path, '$root.$2'
             )
             self.assertEqual(
-                e.message, 'The value is not a bool'
+                e.code, 'BOOL_TYPE'
             )
 
     def test_invalid_nested_list_item_value_should_raise_error(self):
@@ -613,7 +648,7 @@ class ListFieldTest(TestCase):
                 e.path, '$root.$0.values.$2'
             )
             self.assertEqual(
-                e.message, 'The value is not a bool'
+                e.code, 'BOOL_TYPE'
             )
 
 
@@ -637,5 +672,5 @@ class EnumFieldTest(TestCase):
                 e.path, '$root'
             )
             self.assertEqual(
-                e.message, 'The value is not accepted'
+                e.code, 'ENUM_VALUE_NOT_ACCEPT'
             )
