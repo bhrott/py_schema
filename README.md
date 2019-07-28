@@ -2,6 +2,8 @@
 
 A simple and extensible schema validator.
 
+![travis](https://travis-ci.org/benhurott/py_schema.svg?branch=master)
+[![codecov](https://codecov.io/gh/benhurott/py_schema/branch/master/graph/badge.svg)](https://codecov.io/gh/benhurott/py_schema)
 
 ## Install
 
