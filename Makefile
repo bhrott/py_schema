@@ -11,6 +11,7 @@ run-tests:
 
 validate:
 	make run-tests
+	codecov
 
 clean-dist:
 	rm -rf build

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="py_schema",
-    version="0.10.1",
+    version="0.11.0",
     author="Ben-hur Santos Ott",
     author_email="ben-hur@outlook.com",
     description="A simple and extensible schema validator.",

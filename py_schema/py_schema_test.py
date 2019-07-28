@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from py_schema import SchemaValidator, SchemaValidationError, \
     IntField, StrField, BoolField, FloatField, DictField, ListField, \
-    EnumField
+    EnumField, RegexField
 
 
 class SchemaValidatorTest(TestCase):
@@ -697,3 +697,29 @@ class EnumFieldTest(TestCase):
             self.assertEqual(
                 e.code, 'ENUM_VALUE_NOT_ACCEPT'
             )
+
+
+class RegexFieldTest(TestCase):
+    def test_not_match_should_raise_error(self):
+        schema = RegexField('\\d{5}\\Z')
+
+        value = '1234'
+
+        validator = SchemaValidator(schema, value)
+
+        try:
+            validator.validate()
+            self.fail()
+        except SchemaValidationError as e:
+            self.assertEqual(
+                e.code, 'REGEX_NOT_MATCH'
+            )
+
+    def test_valid_regex_should_pass(self):
+        schema = RegexField('\\d{5}\\Z')
+
+        value = '12345'
+
+        validator = SchemaValidator(schema, value)
+
+        validator.validate()

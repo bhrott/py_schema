@@ -1,3 +1,4 @@
+import re
 
 
 class SchemaValidationError(Exception):
@@ -77,12 +78,12 @@ class IntField(BaseField):
 
         if self.min is not None and self.value < self.min:
             self.raise_error(
-                f'INT_MIN'
+                'INT_MIN'
             )
 
         if self.max is not None and self.value > self.max:
             self.raise_error(
-                f'INT_MAX'
+                'INT_MAX'
             )
 
 
@@ -100,12 +101,12 @@ class FloatField(BaseField):
 
         if self.min is not None and self.value < self.min:
             self.raise_error(
-                f'FLOAT_MIN'
+                'FLOAT_MIN'
             )
 
         if self.max is not None and self.value > self.max:
             self.raise_error(
-                f'FLOAT_MAX'
+                'FLOAT_MAX'
             )
 
 
@@ -123,12 +124,12 @@ class StrField(BaseField):
 
         if self.min_length is not None and len(self.value) < self.min_length:
             self.raise_error(
-                f'STR_MIN_LENGTH'
+                'STR_MIN_LENGTH'
             )
 
         if self.max_length is not None and len(self.value) > self.max_length:
             self.raise_error(
-                f'STR_MAX_LENGTH'
+                'STR_MAX_LENGTH'
             )
 
 
@@ -157,7 +158,7 @@ class DictField(BaseField):
             for value_prop_key in self.value:
                 if value_prop_key not in self.schema and value_prop_key not in self.optional_props:
                     self.raise_error(
-                        f'DICT_PROP_NOT_ALLOWED',
+                        'DICT_PROP_NOT_ALLOWED',
                         extra={'prop': value_prop_key}
                     )
 
@@ -167,7 +168,7 @@ class DictField(BaseField):
                     continue
                 else:
                     self.raise_error(
-                        f'DICT_PROP_MISSING',
+                        'DICT_PROP_MISSING',
                         extra={'prop': schema_prop_key}
                     )
 
@@ -198,16 +199,16 @@ class ListField(BaseField):
 
         if self.min_items is not None and len(self.value) < self.min_items:
             self.raise_error(
-                f'LIST_MIN_ITEMS'
+                'LIST_MIN_ITEMS'
             )
 
         if self.max_items is not None and len(self.value) > self.max_items:
             self.raise_error(
-                f'LIST_MAX_ITEMS'
+                'LIST_MAX_ITEMS'
             )
 
         for index, item in enumerate(self.value):
-            self.ctx.add_to_path(f'${index}')
+            self.ctx.add_to_path('${}'.format(index))
 
             self.item_schema.value = item
             self.item_schema.ctx = self.ctx
@@ -224,5 +225,17 @@ class EnumField(BaseField):
     def validator(self):
         if self.value not in self.accept:
             self.raise_error(
-                f'ENUM_VALUE_NOT_ACCEPT'
+                'ENUM_VALUE_NOT_ACCEPT'
+            )
+
+
+class RegexField(BaseField):
+    def __init__(self, regex, *args, **kwargs):
+        super(RegexField, self).__init__(*args, **kwargs)
+        self.regex = regex
+
+    def validator(self):
+        if not re.match(self.regex, self.value):
+            self.raise_error(
+                'REGEX_NOT_MATCH'
             )
