@@ -120,6 +120,8 @@ venv.bak/
 .dmypy.json
 dmypy.json
 playground.py
+.idea
+.vscode
 
 # Pyre type checker
 .pyre/

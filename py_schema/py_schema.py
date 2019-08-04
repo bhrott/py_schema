@@ -239,3 +239,36 @@ class RegexField(BaseField):
             self.raise_error(
                 'REGEX_NOT_MATCH'
             )
+
+
+class OrField(BaseField):
+    def __init__(self, schemas: [BaseField], *args, **kwargs):
+        super(OrField, self).__init__(*args, **kwargs)
+        self.schemas = schemas
+
+    def validator(self):
+        value = self.value
+        schemas = self.schemas
+
+        errors = []
+
+        for sc in schemas:
+            try:
+                validator = SchemaValidator(
+                    schema=sc,
+                    value=value
+                )
+                validator.validate()
+
+                return
+            except SchemaValidationError as sve:
+                errors.append(sve)
+
+        if len(schemas) == len(errors):
+            self.raise_error(
+                code='OR_NO_MATCHING_SCHEMA',
+                extra={
+                    'errors': errors
+                }
+            )
+

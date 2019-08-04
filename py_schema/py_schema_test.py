@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from py_schema import SchemaValidator, SchemaValidationError, \
     IntField, StrField, BoolField, FloatField, DictField, ListField, \
-    EnumField, RegexField
+    EnumField, RegexField, OrField
 
 
 class SchemaValidatorTest(TestCase):
@@ -72,10 +72,17 @@ class SchemaValidatorTest(TestCase):
                     'alive': BoolField(),
                     'gender': EnumField(
                         accept=['M', 'F', 'O']
+                    ),
+                    'code': RegexField(regex='^([0-9]{3})'),
+                    'doc': OrField(
+                        schemas=[
+                            RegexField(regex='[0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}\\-?[0-9]{2}'),  # cpf
+                            RegexField(regex='[0-9]{2}\\.?[0-9]{3}\\.?[0-9]{3}\\/?[0-9]{4}\\-?[0-9]{2}')  # cnpj
+                        ]
                     )
                 },
                 strict=True,
-                optional_props=['gender']
+                optional_props=['gender', 'code', 'doc']
             )
         )
 
@@ -85,13 +92,16 @@ class SchemaValidatorTest(TestCase):
                 'age': 31,
                 'money': 999.0,
                 'alive': True,
-                'gender': 'M'
+                'gender': 'M',
+                'code': '468',
+                'doc': '759.425.730-85'
             },
             {
                 'name': 'Superman',
                 'age': 29,
                 'money': 0.0,
-                'alive': True
+                'alive': True,
+                'doc': '31.035.254/0001-79'
             }
         ]
 
@@ -722,4 +732,44 @@ class RegexFieldTest(TestCase):
 
         validator = SchemaValidator(schema, value)
 
+        validator.validate()
+
+
+class OrFieldTest(TestCase):
+    def test_multiple_schema_error_should_raise_error(self):
+        schema = OrField(
+            schemas=[
+                StrField(),
+                IntField()
+            ]
+        )
+
+        value = True
+
+        validator = SchemaValidator(schema, value)
+
+        try:
+            validator.validate()
+            self.fail()
+        except SchemaValidationError as e:
+            self.assertEqual(
+                e.code, 'OR_NO_MATCHING_SCHEMA'
+            )
+            self.assertEqual(
+                2,
+                len(e.extra['errors'])
+            )
+
+    def test_one_valid_schema_should_pass(self):
+        schema = OrField(
+            schemas=[
+                StrField(),
+                BoolField(),
+                IntField()
+            ]
+        )
+
+        value = True
+
+        validator = SchemaValidator(schema, value)
         validator.validate()

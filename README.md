@@ -428,6 +428,39 @@ validator.validate()
 The regex pattern.
 
 
+### OR Field
+
+Validate if the value matches with at least one of given schemas.
+
+```python
+from py_schema import OrField, StrField, BoolField, IntField, SchemaValidator, SchemaValidationError
+
+schema = OrField(
+    schemas=[
+        StrField(),
+        IntField()
+    ]
+)
+
+value = True
+
+validator = SchemaValidator(schema, value)
+
+try:
+    validator.validate()
+except SchemaValidationError as e:
+    print(e.extra['errors'])
+```
+
+#### schemas ([BaseField], required)
+
+The list of the schemas to validate. 
+If all the schemas failed, it will raise a `OR_NO_MATCHING_SCHEMA` error.
+
+If the validation fail, you can check the error prop `extra['errors']` to see all the validation results.
+
+
+
 ## Misc
 
 ### SchemaValidationError
